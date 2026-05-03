@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Колесо вопросов — Программирование</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&family=Fredoka+One&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0c29;
+    --card: #1a1640;
+    --accent1: #ff6b6b;
+    --accent2: #ffd93d;
+    --accent3: #6bcb77;
+    --accent4: #4d96ff;
+    --accent5: #c77dff;
+    --accent6: #ff9a3c;
+    --text: #ffffff;
+    --subtext: #b0aed0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(77,150,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(199,125,255,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 60% 80%, rgba(255,107,107,0.10) 0%, transparent 60%);
+  }
+
+  h1 {
+    font-family: 'Fredoka One', cursive;
+    text-align: center;
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    padding: 28px 20px 6px;
+    letter-spacing: 1px;
+    background: linear-gradient(90deg, var(--accent2), var(--accent1), var(--accent5));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .subtitle {
+    text-align: center;
+    color: var(--subtext);
+    font-size: 0.95rem;
+    margin-bottom: 24px;
+  }
+
+  .main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+    padding: 0 16px 48px;
+  }
+
+  /* ── WHEEL ── */
+  .wheel-wrap {
+    position: relative;
+    width: min(420px, 90vw);
+    height: min(420px, 90vw);
+    filter: drop-shadow(0 0 32px rgba(255,217,61,0.25));
+  }
+
+  #wheelCanvas {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+  }
+
+  .pointer {
+    position: absolute;
+    top: 50%;
+    right: -22px;
+    transform: translateY(-50%);
+    width: 0;
+    height: 0;
+    border-top: 22px solid transparent;
+    border-bottom: 22px solid transparent;
+    border-right: 44px solid var(--accent2);
+    filter: drop-shadow(0 0 8px rgba(255,217,61,0.8));
+    z-index: 10;
+  }
+
+  .center-btn {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent1));
+    border: none;
+    cursor: pointer;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.85rem;
+    color: #1a0a00;
+    letter-spacing: 0.5px;
+    box-shadow: 0 0 0 6px rgba(255,217,61,0.2), 0 4px 20px rgba(0,0,0,0.5);
+    transition: transform 0.15s, box-shadow 0.15s;
+    z-index: 20;
+    line-height: 1.15;
+  }
+
+  .center-btn:hover {
+    transform: translate(-50%, -50%) scale(1.08);
+    box-shadow: 0 0 0 8px rgba(255,217,61,0.3), 0 6px 28px rgba(0,0,0,0.6);
+  }
+
+  .center-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: translate(-50%, -50%);
+  }
+
+  /* ── QUESTION CARD ── */
+  .question-card {
+    width: min(560px, 95vw);
+    background: var(--card);
+    border-radius: 24px;
+    padding: 28px 32px;
+    border: 1px solid rgba(255,255,255,0.08);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.4);
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 12px;
+    transition: all 0.4s ease;
+  }
+
+  .question-card.hidden { opacity: 0; transform: translateY(10px); }
+  .question-card.visible { opacity: 1; transform: translateY(0); }
+
+  .q-number {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1rem;
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: rgba(255,255,255,0.07);
+    color: var(--subtext);
+  }
+
+  .q-category {
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+
+  .q-text {
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+    font-weight: 700;
+    line-height: 1.5;
+    color: #fff;
+  }
+
+  .q-idle {
+    color: var(--subtext);
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+
+  /* ── COUNTER ── */
+  .counter-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .counter-box {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 16px;
+    padding: 12px 24px;
+    text-align: center;
+  }
+
+  .counter-box .num {
+    font-family: 'Fredoka One', cursive;
+    font-size: 2rem;
+    line-height: 1;
+  }
+
+  .counter-box .lbl {
+    font-size: 0.78rem;
+    color: var(--subtext);
+    margin-top: 2px;
+  }
+
+  /* ── LIST ── */
+  .question-list-wrap {
+    width: min(700px, 95vw);
+  }
+
+  .list-toggle {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 16px;
+    padding: 14px 20px;
+    color: var(--text);
+    font-family: 'Nunito', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.2s;
+  }
+
+  .list-toggle:hover { background: rgba(255,255,255,0.05); }
+
+  .list-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.5s ease;
+  }
+
+  .list-body.open { max-height: 2000px; }
+
+  .q-list {
+    margin-top: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .q-item {
+    background: var(--card);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    transition: background 0.2s;
+  }
+
+  .q-item.asked {
+    background: rgba(107,203,119,0.12);
+    border-color: rgba(107,203,119,0.3);
+  }
+
+  .q-item .num {
+    font-family: 'Fredoka One', cursive;
+    min-width: 28px;
+    color: var(--subtext);
+    font-size: 0.85rem;
+    padding-top: 1px;
+  }
+
+  .q-item.asked .num { color: var(--accent3); }
+
+  /* confetti */
+  .confetti-piece {
+    position: fixed;
+    width: 10px;
+    height: 10px;
+    border-radius: 2px;
+    animation: fall linear forwards;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  @keyframes fall {
+    0%   { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(255,217,61,0.3)); }
+    50%       { filter: drop-shadow(0 0 48px rgba(255,217,61,0.7)); }
+  }
+
+  .spinning { animation: pulse-glow 0.6s ease-in-out infinite; }
+</style>
+</head>
+<body>
+
+<h1>🎡 Колесо вопросов</h1>
+<p class="subtitle">Программирование · 58 вопросов</p>
+
+<div class="main">
+
+  <!-- Wheel -->
+  <div class="wheel-wrap" id="wheelWrap">
+    <canvas id="wheelCanvas"></canvas>
+    <div class="pointer"></div>
+    <button class="center-btn" id="spinBtn" onclick="spin()">КРУТИ!<br>▶</button>
+  </div>
+
+  <!-- Stats -->
+  <div class="counter-row">
+    <div class="counter-box">
+      <div class="num" id="cntAsked" style="color:var(--accent3)">0</div>
+      <div class="lbl">задано</div>
+    </div>
+    <div class="counter-box">
+      <div class="num" id="cntLeft" style="color:var(--accent2)">58</div>
+      <div class="lbl">осталось</div>
+    </div>
+    <div class="counter-box">
+      <div class="num" style="color:var(--accent4)">58</div>
+      <div class="lbl">всего</div>
+    </div>
+  </div>
+
+  <!-- Question card -->
+  <div class="question-card hidden" id="qCard">
+    <div class="q-idle" id="qIdle">Крутите колесо, чтобы получить вопрос!</div>
+    <div id="qResult" style="display:none; flex-direction:column; align-items:center; gap:10px; width:100%">
+      <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:center">
+        <span class="q-number" id="qNum"></span>
+        <span class="q-category" id="qCat"></span>
+      </div>
+      <div class="q-text" id="qText"></div>
+    </div>
+  </div>
+
+  <!-- All questions list -->
+  <div class="question-list-wrap">
+    <button class="list-toggle" id="listToggle" onclick="toggleList()">
+      <span>📋 Все вопросы</span>
+      <span id="listArrow">▼</span>
+    </button>
+    <div class="list-body" id="listBody">
+      <div class="q-list" id="qList"></div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const CATEGORIES = [
+  { name: "🧠 Основные понятия", color: "#4d96ff", questions: [
+    "Что такое алгоритм? Приведи пример из жизни.",
+    "Почему компьютер выполняет команды строго по порядку?",
+    "Чем программа отличается от одной команды?",
+    "Почему важно, чтобы команды были точными и понятными?",
+    "Что произойдёт, если в алгоритме пропустить один шаг?",
+    "Составь алгоритм из 4 шагов для любого простого дела.",
+    "Зачем программисты разбивают большую задачу на маленькие шаги?",
+    "Чем запись алгоритма помогает не запутаться при решении задачи?"
+  ]},
+  { name: "🔁 Циклы", color: "#ff6b6b", questions: [
+    "Что такое цикл и зачем он нужен в программе?",
+    "Чем цикл «повтори N раз» отличается от цикла «пока условие верно»?",
+    "Цикл повторяется 5 раз, внутри 3 команды — сколько всего выполнится действий?",
+    "Что такое бесконечный цикл и когда он опасен?",
+    "Почему цикл экономит время программиста?",
+    "Приведи пример из жизни, где что-то повторяется определённое число раз.",
+    "Можно ли вложить один цикл внутрь другого? Для чего это может пригодиться?",
+    "Как программа узнаёт, что цикл нужно остановить?"
+  ]},
+  { name: "❓ Условия", color: "#ffd93d", questions: [
+    "Что такое условие в программировании?",
+    "Объясни своими словами, как работает блок «если — то — иначе».",
+    "Приведи пример условия из реальной жизни.",
+    "Что произойдёт, если условие окажется ложным, а блока «иначе» нет?",
+    "Чем условие внутри цикла отличается от обычного условия?",
+    "Составь условие для игры: герой побеждает, если...",
+    "Зачем программе нужно проверять условия, а не просто выполнять всё подряд?",
+    "Может ли одно условие содержать два требования одновременно?"
+  ]},
+  { name: "📦 Переменные", color: "#c77dff", questions: [
+    "Что такое переменная и для чего она нужна?",
+    "Почему переменную сравнивают с коробкой, у которой есть подпись?",
+    "Что произойдёт с переменной, если записать в неё новое значение?",
+    "Переменная «очки» = 10, затем мы прибавляем 5. Чему она стала равна?",
+    "Зачем давать переменным понятные названия?",
+    "Может ли переменная хранить слово, а не число?",
+    "Как переменная «жизни» помогает игре отслеживать состояние игрока?"
+  ]},
+  { name: "🐛 Ошибки и отладка", color: "#ff9a3c", questions: [
+    "Что такое баг и почему он появляется?",
+    "Как называется процесс поиска и исправления ошибок в программе?",
+    "Почему ошибки в программировании — это нормально и не страшно?",
+    "Как лучше искать ошибку: просматривать всю программу сразу или по шагам?",
+    "Персонаж делает не то, что нужно. С чего начнёшь поиск проблемы?",
+    "Почему важно проверять программу после каждого изменения?",
+    "Может ли программа работать, но при этом давать неверный результат?",
+    "Что значит «воспроизвести ошибку» перед тем, как её исправить?"
+  ]},
+  { name: "🎮 Блочное программирование", color: "#6bcb77", questions: [
+    "Почему в блочном программировании нельзя соединить несовместимые блоки?",
+    "Какой блок обычно запускает выполнение программы?",
+    "Зачем нужен блок «ждать»? Приведи пример его использования.",
+    "Чем блок «навсегда» отличается от блока «повтори N раз»?",
+    "Для чего используют блок «остановить программу»?",
+    "Что даёт возможность создавать собственные блоки-функции?",
+    "Почему блочное программирование — хороший способ начать изучать код?"
+  ]},
+  { name: "🌍 Программирование вокруг нас", color: "#00d4ff", questions: [
+    "Назови три устройства из повседневной жизни, которые работают по программе.",
+    "Как светофор использует условия и циклы в своей работе?",
+    "Чем программа в лифте похожа на программу, которую ты пишешь?",
+    "Почему сбой в программе самолёта опаснее, чем сбой в игре?",
+    "Как, по-твоему, устроена программа робота-пылесоса?",
+    "Где ещё, кроме компьютеров, встречаются алгоритмы?"
+  ]},
+  { name: "💡 Размышления", color: "#ff6eb4", questions: [
+    "Что общего между алгоритмом и инструкцией к настольной игре?",
+    "Может ли компьютер принимать решения самостоятельно? Почему?",
+    "Что важнее: быстро написать программу или написать её без ошибок?",
+    "Чем работа программиста похожа на работу архитектора?",
+    "Если программа решает задачу, но очень медленно — она хорошая?",
+    "Зачем программисты пишут комментарии к своему коду?"
+  ]}
+];
+
+// Build flat question list
+const ALL_QUESTIONS = [];
+CATEGORIES.forEach(cat => {
+  cat.questions.forEach(q => {
+    ALL_QUESTIONS.push({ text: q, category: cat.name, color: cat.color });
+  });
+});
+
+const TOTAL = ALL_QUESTIONS.length; // 58
+const askedSet = new Set();
+
+// ── CANVAS WHEEL ──
+const canvas = document.getElementById('wheelCanvas');
+const ctx = canvas.getContext('2d');
+
+function resize() {
+  const size = canvas.parentElement.offsetWidth;
+  canvas.width = size;
+  canvas.height = size;
+  drawWheel(currentAngle);
+}
+
+const SEGMENT_COLORS = [
+  "#4d96ff","#ff6b6b","#ffd93d","#c77dff",
+  "#ff9a3c","#6bcb77","#00d4ff","#ff6eb4",
+  "#a8ff78","#f7971e","#7f7fd5","#43cea2"
+];
+
+const SEG_COUNT = 16;
+const ARC = (2 * Math.PI) / SEG_COUNT;
+let currentAngle = 0;
+
+function drawWheel(rotation) {
+  const w = canvas.width;
+  const cx = w / 2, cy = w / 2, r = w / 2 - 4;
+  ctx.clearRect(0, 0, w, w);
+
+  for (let i = 0; i < SEG_COUNT; i++) {
+    const start = rotation + i * ARC;
+    const end = start + ARC;
+    const mid = start + ARC / 2;
+
+    // Segment
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, start, end);
+    ctx.closePath();
+    ctx.fillStyle = SEGMENT_COLORS[i % SEGMENT_COLORS.length];
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Label
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(mid);
+    ctx.textAlign = 'right';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = `bold ${Math.max(10, w * 0.028)}px Nunito`;
+    const label = '❓';
+    ctx.fillText(label, r - 16, 5);
+    ctx.restore();
+  }
+
+  // Center circle
+  ctx.beginPath();
+  ctx.arc(cx, cy, w * 0.09, 0, 2 * Math.PI);
+  ctx.fillStyle = '#0f0c29';
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+}
+
+// ── SPIN ──
+let isSpinning = false;
+
+function spin() {
+  if (isSpinning) return;
+  if (askedSet.size >= TOTAL) {
+    alert('🎉 Все 58 вопросов уже заданы! Сбросьте, чтобы начать заново.');
+    return;
+  }
+
+  isSpinning = true;
+  document.getElementById('spinBtn').disabled = true;
+  document.getElementById('wheelWrap').classList.add('spinning');
+
+  // Pick a random unanswered question
+  const remaining = ALL_QUESTIONS
+    .map((q, i) => ({ q, i }))
+    .filter(({ i }) => !askedSet.has(i));
+  const pick = remaining[Math.floor(Math.random() * remaining.length)];
+
+  const totalRotation = (Math.PI * 2) * (6 + Math.random() * 4);
+  const duration = 3200 + Math.random() * 800;
+  const startAngle = currentAngle;
+  const startTime = performance.now();
+
+  function easeOut(t) {
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function frame(now) {
+    const elapsed = now - startTime;
+    const t = Math.min(elapsed / duration, 1);
+    currentAngle = startAngle + totalRotation * easeOut(t);
+    drawWheel(currentAngle);
+
+    if (t < 1) {
+      requestAnimationFrame(frame);
+    } else {
+      isSpinning = false;
+      document.getElementById('spinBtn').disabled = false;
+      document.getElementById('wheelWrap').classList.remove('spinning');
+      showQuestion(pick.i);
+    }
+  }
+
+  requestAnimationFrame(frame);
+}
+
+function showQuestion(idx) {
+  askedSet.add(idx);
+  const q = ALL_QUESTIONS[idx];
+
+  // Update card
+  const card = document.getElementById('qCard');
+  card.classList.remove('visible');
+  card.classList.add('hidden');
+
+  setTimeout(() => {
+    document.getElementById('qIdle').style.display = 'none';
+    const res = document.getElementById('qResult');
+    res.style.display = 'flex';
+    document.getElementById('qNum').textContent = `Вопрос ${idx + 1}`;
+    document.getElementById('qCat').textContent = q.category;
+    document.getElementById('qCat').style.color = q.color;
+    document.getElementById('qText').textContent = q.text;
+
+    card.classList.remove('hidden');
+    card.classList.add('visible');
+  }, 200);
+
+  // Update counters
+  document.getElementById('cntAsked').textContent = askedSet.size;
+  document.getElementById('cntLeft').textContent = TOTAL - askedSet.size;
+
+  // Update list item
+  const item = document.getElementById('qItem-' + idx);
+  if (item) item.classList.add('asked');
+
+  // Confetti
+  launchConfetti();
+}
+
+// ── BUILD LIST ──
+function buildList() {
+  const list = document.getElementById('qList');
+  ALL_QUESTIONS.forEach((q, i) => {
+    const div = document.createElement('div');
+    div.className = 'q-item';
+    div.id = 'qItem-' + i;
+    div.innerHTML = `<span class="num">${i + 1}</span><span>${q.text}</span>`;
+    list.appendChild(div);
+  });
+}
+
+function toggleList() {
+  const body = document.getElementById('listBody');
+  const arrow = document.getElementById('listArrow');
+  body.classList.toggle('open');
+  arrow.textContent = body.classList.contains('open') ? '▲' : '▼';
+}
+
+// ── CONFETTI ──
+function launchConfetti() {
+  const colors = ['#ff6b6b','#ffd93d','#6bcb77','#4d96ff','#c77dff','#ff9a3c'];
+  for (let i = 0; i < 38; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    el.style.cssText = `
+      left: ${Math.random() * 100}vw;
+      top: -12px;
+      background: ${colors[Math.floor(Math.random() * colors.length)]};
+      width: ${6 + Math.random() * 8}px;
+      height: ${6 + Math.random() * 8}px;
+      border-radius: ${Math.random() > 0.5 ? '50%' : '2px'};
+      animation-duration: ${1.5 + Math.random() * 2}s;
+      animation-delay: ${Math.random() * 0.5}s;
+    `;
+    document.body.appendChild(el);
+    el.addEventListener('animationend', () => el.remove());
+  }
+}
+
+// ── INIT ──
+buildList();
+window.addEventListener('resize', resize);
+resize();
+
+// Show card idle state
+setTimeout(() => {
+  const card = document.getElementById('qCard');
+  card.classList.remove('hidden');
+  card.classList.add('visible');
+}, 300);
+</script>
+</body>
+</html>
